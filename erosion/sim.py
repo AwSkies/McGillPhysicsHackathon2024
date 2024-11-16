@@ -19,6 +19,7 @@ class Erosion():
         self.particle_velocities = np.zeros((self.Nparticles,3))
 
         self.grid_velocities = np.zeros((self.dimx, self.dimy, self.dimz, 3))
+        self.rocks = np.zeros(self.dims, dtype=bool)
 
         self.dims3 = (self.dimx, self.dimy, self.dimz, 3)
         self.h = 1
