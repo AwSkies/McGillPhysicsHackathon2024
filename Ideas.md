@@ -11,3 +11,5 @@
 
 # Roche Limit Simulator
 - Simulate a planet as a bunch of particles
+
+# 3-body Juggling
