@@ -9,3 +9,5 @@
 
 # Fluid sim
 
+# Roche Limit Simulator
+- Simulate a planet as a bunch of particles
