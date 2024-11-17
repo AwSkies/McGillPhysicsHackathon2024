@@ -1,2 +1,2 @@
 from .sim import Erosion
-from .render import render
+from .render import Renderer
