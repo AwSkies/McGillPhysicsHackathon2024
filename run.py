@@ -9,11 +9,15 @@ def main():
     parser = GooeyParser(prog="erosion-simulator")
     render_group  = parser.add_argument_group("Render Options")
     render_group.add_argument('output', help = "Output File Name of Animation", widget = 'FileSaver')
-    render_group.add_argument('frames', type = int, help = "Number of frames/simulation steps to render", default = 75)
+    render_group.add_argument('frames', type = int, help = "Number of frames to render", default = 75)
+    render_group.add_argument('fps', type = int, help = 'Animation frames per second', default = 5)
+
+    simulation_group = parser.add_argument_group("Simulation Options")
+    simulation_group.add_argument('steps_per_frame', type = int, help = "Simulation steps per frame", default = 40)
 
     args = parser.parse_args()
 
-    sim = Erosion()
+    sim = Erosion(args.steps_per_frame)
     ren = Renderer()
 
     def advance_frame():
@@ -38,7 +42,7 @@ def main():
 
     # print(test_animation_advance_frame())
 
-    ren.render(advance_frame(), args.output, args.frames)
+    ren.render(advance_frame(), args.output, args.frames, args.fps)
 
 if __name__ == '__main__':
     main()
