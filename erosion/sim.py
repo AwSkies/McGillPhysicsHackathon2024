@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import random
 
 
 class Erosion():
@@ -139,26 +140,38 @@ class Erosion():
                         self.kill_rock(i, j, k)
                     print(i, j, k, self.rocks[2][2][2])
                     '''
-                    rocks_killlist[i][j][k] = self.erode_rock(i, j, k)
+                    rocks_killlist[i,j,k] = self.erode_rock(i, j, k)
+                    self.kill_rock(rocks_killlist)
 
     def erode_rock(self, x, y, z):
         rock_HP = 0.0
         damage = 6
+        Median_fluid_velocity = 1000
         normal_vector, flow_vector, rock_HP = self.rock_character(x, y, z)
         normal_magnitude = math.sqrt(normal_vector[0]**2 + normal_vector[1]**2 + normal_vector[2]**2)
         print("Position", x, y, z, 'RockHP', rock_HP, "Vector", normal_vector[0], normal_vector[1], normal_vector[2])
         if(normal_magnitude == 0):
             return True
         cosine = np.dot(normal_vector, flow_vector)
-        flow_magnitude = math.sqrt(flow_vector[0]**2 + flow_vector[1]**2 + flow_vector[2]**2)
+        flow_magnitude = flow_vector[0]**2 + flow_vector[1]**2 + flow_vector[2]**2
+        mean = cosine * flow_magnitude / Median_fluid_velocity
+        damage = self.gaussian_random(mean, 1, 0, 5.99)
+        if(damage > rock_HP):
+            return True
+
+    def kill_rock(self, rocks_killlist):
+        for i in range(self.dims[0]):
+            for j in range(self.dims[1]):
+                for k in range(self.dims[2]):
+                    if(rocks_killlist[i][j][k]):
+                        self.rocks[i, j, k] = False
+
+    def gaussian_random(self, mean, std_dev, min_val, max_val):
+        while True:
+            value = np.random.normal(mean, std_dev)
         
-        return False
-
-
-    
-    def kill_rock(self, x, y, z):
-        self.rocks[x, y, z] = False
-        #print("rock killed")
+            if min_val <= value < max_val:
+                return value
 
     def rock_character(self, x, y, z):
         normal_smoothing = 1
