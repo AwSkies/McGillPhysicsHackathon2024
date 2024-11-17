@@ -15,9 +15,11 @@ def main():
     sim = Erosion()
     ren = Renderer(False)
 
+
     def advance_frame():
-        while True:
-            yield sim.simulate()
+        for i in range(3):
+            arr1 = sim.simulate()
+            yield arr1
 
     def test_animation_advance_frame():
         for j in range(0, 10):
@@ -34,7 +36,9 @@ def main():
             
             yield arr
 
-    ren.render(advance_frame, args.output)
+    # print(test_animation_advance_frame())
+
+    ren.render(advance_frame(), args.output)
 
 if __name__ == '__main__':
     main()
