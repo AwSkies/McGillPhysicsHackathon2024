@@ -45,9 +45,9 @@ class Renderer:
     def format(self):
         plt.tight_layout()
 
-    def render(self, frames, file, number):
+    def render(self, frames, file, number, fps):
         print("Rendering...")
-        anim = animation.FuncAnimation(self.fig, self.process_frame, frames, interval = 300, save_count=number)
+        anim = animation.FuncAnimation(self.fig, self.process_frame, frames, interval = 1000 / fps, save_count=number)
         self.format()
         plt.show()
         print("Saving...")
