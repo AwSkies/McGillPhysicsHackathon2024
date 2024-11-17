@@ -6,11 +6,11 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from skimage import measure
 
 class Renderer:
-    def __init__(self):
+    def __init__(self, edges):
         # Make plot
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
-        
+        self.edges = edges
 
     def process_frame(self, state):
         self.ax.clear()
@@ -28,7 +28,8 @@ class Renderer:
                 verts, faces, normals, values = measure.marching_cubes(state, 0)
                 mesh = Poly3DCollection(verts[faces])
                 mesh.set_color(color)
-                mesh.set_edgecolor("k")
+                if self.edges:
+                    mesh.set_edgecolor("k")
                 mesh.set_alpha(alpha)
                 return self.ax.add_collection3d(mesh)
             except ValueError:
