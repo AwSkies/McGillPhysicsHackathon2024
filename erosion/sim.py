@@ -4,7 +4,7 @@ import random
 
 
 class Erosion():
-    def __init__(self):
+    def __init__(self, simulation_steps):
         self.dimx, self.dimy, self.dimz = (32*4, 16*4, 32*4)
         self.dims = np.array([self.dimx, self.dimy, self.dimz])
         self.xs = np.arange(0, self.dimx, 1)
@@ -21,8 +21,8 @@ class Erosion():
         self.rocks[:10*4, 5*4:11*4, (20)*4:] = False
         self.rocks[22*4:, 5*4:11*4, (20)*4:] = False
         self.rocks[:, :, (29)*4:] = False
-        self.rock_hardness = np.ones(self.dims)
-        self.rock_hardness[:,:, self.dimz//3:2*self.dimz//3] = 2
+        self.rock_hardness = np.ones(self.dims)*2.5
+        self.rock_hardness[:,:, self.dimz//3:2*self.dimz//3] = 1
         self.edgerocks = np.zeros(shape=self.dims, dtype=int)
         self.bottomrocks = np.zeros(shape=self.dims, dtype=bool)
         self.step = 0
@@ -32,7 +32,7 @@ class Erosion():
 
         self.smoothing_factor = 8
 
-        self.simsteps = 40
+        self.simsteps = simulation_steps
 
 
 
@@ -79,7 +79,7 @@ class Erosion():
 
 
     def remove_rocks(self):
-        random_field = np.random.uniform(size=(self.dims))/self.velocities #/self.rock_hardness
+        random_field = np.random.uniform(size=(self.dims))/self.velocities / self.rock_hardness
         edge_rocks_to_remove = np.logical_and(self.edgerocks, random_field < self.edgerock1_threshold)
         bottom_rocks_to_remove = np.logical_and(self.bottomrocks, random_field < self.bottomrock_threshold)
         rocks_to_remove = np.logical_or(edge_rocks_to_remove, bottom_rocks_to_remove)
@@ -88,12 +88,15 @@ class Erosion():
 
     def smooth_state(self, fact):
         compressedarray = np.zeros((self.dimx//fact, self.dimy//fact, self.dimz//fact))
+        compressed_rock_hardness = np.zeros((self.dimx//fact, self.dimy//fact, self.dimz//fact))
         for i in range(fact):
             for j in range(fact):
                 for k in range(fact):
                     compressedarray += self.rocks[i::fact, j::fact, k::fact]
+                    compressed_rock_hardness += self.rock_hardness[i::fact, j::fact, k::fact]
         smoothed_rock_array = compressedarray > 0.5*fact**3
-        return smoothed_rock_array
+        smoothed_hardness = compressed_rock_hardness / fact**3
+        return smoothed_rock_array, smoothed_hardness
 
 
 
@@ -105,10 +108,11 @@ class Erosion():
             self.remove_rocks()
             self.step += 1
         print(f"computed {self.step} simulation steps")
-        smoothed_rocks = self.smooth_state(self.smoothing_factor)
+        smoothed_rocks, smoothed_hardness = self.smooth_state(self.smoothing_factor)
         state = np.zeros(self.dims//self.smoothing_factor)
         state[:,:,:self.H//self.smoothing_factor+1] = 1
         state[smoothed_rocks] = 2
+        state[np.logical_and(smoothed_rocks, smoothed_hardness > 2)] = 3
         state = np.rot90(state,axes=(0,1))
         return state
 
