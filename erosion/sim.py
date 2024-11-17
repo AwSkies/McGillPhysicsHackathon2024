@@ -7,21 +7,33 @@ class Erosion():
     def __init__(self):
         self.Nparticles = 20
 
-        self.dimx, self.dimy, self.dimz = (30, 10, 10)
+        self.dimx, self.dimy, self.dimz = (32*4, 16*4, 32*4)
         self.dims = np.array([self.dimx, self.dimy, self.dimz])
         self.xs = np.arange(0, self.dimx, 1)
 
         self.h = 1
         self.V = 1
-        self.A = 8
+        self.A = 20*16
         self.AV = self.A*self.V
         self.H = 7
         self.areas = np.zeros(self.dimx)
         self.velocities = np.zeros(self.dimx)
         self.rocks = np.ones(self.dims, dtype=bool)
-        self.rocks[:, 4:6, 4:] = False
-        self.rocks[:, :, 9:] = False
+        self.rocks[:, 7*4:9*4, (20)*4:] = False
+        self.rocks[:10*4, 5*4:11*4, (20)*4:] = False
+        self.rocks[22*4:, 5*4:11*4, (20)*4:] = False
+        self.rocks[:, :, (29)*4:] = False
+        self.rock_hardness = np.ones(self.dims)
+        self.rock_hardness[:,:, self.dimz//3:2*self.dimz//3] = 2
+        # self.rocks = np.roll(self.rocks, -2, axis=1)
+        self.edgerocks = np.zeros(shape=self.dims, dtype=int)
+        self.bottomrocks = np.zeros(shape=self.dims, dtype=bool)
+        self.step = 0
+        self.edgerock1_threshold = 0.03/10*3
+        self.bottomrock_threshold = 0.1/10*3
+        self.edgerock2_threshold = 0.6/10
 
+        self.smoothing_factor = 8
 
 
 
@@ -38,10 +50,9 @@ class Erosion():
         self.particle_positions = np.random.uniform(size=(self.Nparticles,3)) * (self.dims - 2) + 1
         # self.particle_positions = np.array([[2.2, 2.1, 2.1]])
 
-        self.simsteps = 10
+        self.simsteps = 40
 
-        self.initializeAreas()
-        self.initializeVelocities()
+
 
 
     def getAstrip(self, x, z):
@@ -50,36 +61,123 @@ class Erosion():
     def getArea(self, x):
         return np.count_nonzero(np.logical_not(self.rocks[x,:,:self.H+1]))
 
-    def initializeAreas(self):
-        area = 0
-        for z in range(self.dimz):
-            area += self.getAstrip(0, z)
-            if area > self.A:
-                self.H = z
-                break
-        area2 = area-self.getAstrip(0, self.H)
-        if abs(area2 - self.A) < (self.A - area):
-            self.H -= 1
+    def calculateAreas(self):
+        max_H = 0
+        for x in range(5):
+            area = 0
+            for z in range(self.dimz):
+                area += self.getAstrip(0, z)
+                if area > self.A:
+                    H = z
+                    break
+            area2 = area-self.getAstrip(0, self.H)
+            if abs(area2 - self.A) < (self.A - area):
+                H -= 1
+            if H > max_H:
+                max_H = H
 
-        for x in self.xs:
-            self.areas[x] = self.getArea(x)
+        self.H = max_H
 
-    def initializeVelocities(self):
+        self.areas = np.count_nonzero(np.logical_not(self.rocks[:,:,:self.H+1]),axis=(1,2))
+        # print(self.areas)
+        #
+        # for x in self.xs:
+        #     self.areas[x] = self.getArea(x)
+        # print(self.areas)
+
+
+    def calculateVelocities(self):
         self.velocities = self.AV/self.areas
+        # self.velocities = np.random.uniform(shape=(self.dimx))
+        # self.velocities = np.array([[self.velocities]])
+        # self.velocities = np.repeat(self.velocities,self.dimy,axis=1)
+        self.velocities = np.tile(self.velocities,(self.dimz,self.dimy, 1))
+        self.velocities=np.transpose(self.velocities,axes=(2,1,0))
+        # print(self.velocities.shape)
+        # print(self.velocities[4,8,1])
+
+    # def calculateEdgeRocks(self):
+    #     self.edgerocks[:, :, 0:self.H + 1] += np.logical_and(self.rocks[:, :, 0:self.H + 1],
+    #                                             np.logical_not(
+    #                                                              np.roll(self.rocks[:, :, 0:self.H + 1], 1, axis=1)))
+    #     # print(self.rocks[:,:,0:self.H+1])
+    #     self.edgerocks[:, :, 0:self.H + 1] += np.logical_and(self.rocks[:, :, 0:self.H + 1],
+    #                                                          np.logical_not(
+    #                                                              np.roll(self.rocks[:, :, 0:self.H + 1], -1, axis=1)))
+
+
+    def calculateEdgeRocks(self):
+        # print(self.rocks[4, :, 5])
+        # print(np.roll(self.rocks[:, :, 5:6],1,axis=1))
+        self.edgerocks[:,:,0:self.H+1] += np.logical_and(self.rocks[:,:,0:self.H+1],
+                                        np.logical_not(np.roll(self.rocks[:,:,0:self.H+1],1,axis=1)))
+        # print(self.rocks[:,:,0:self.H+1])
+        self.edgerocks[:,:,0:self.H+1] += np.logical_and(self.rocks[:,:,0:self.H+1],
+                                        np.logical_not(np.roll(self.rocks[:,:,0:self.H+1],-1,axis=1)))
+        self.bottomrocks[:,:,0:self.H] += np.logical_and(self.rocks[:,:,0:self.
+                                                         H],np.logical_not(np.roll(self.rocks[:,:,0:self.H],-1,axis=2)))
+        # print(np.count_nonzero(self.edgerocks[:,:,8]))
+
+
+
+
+        # self.edgerocks_old = np.copy(self.edgerocks)
+        # self.edgerocks[:] = 0
+        # for x in range(self.dimx):
+        #     for y in range(self.dimy-1):
+        #         for z in range(self.H+1):
+        #             if self.rocks[x,y,z] and not self.rocks[x,y+1,z]:
+        #                 self.edgerocks[x,y,z] += 1
+                            # print("EEE")
+        #             except:
+        #                 pass
+        # try:
+        #     if self.rocks[x, y, z] and not self.rocks[x, y - 1, z]:
+        #         self.edgerocks[x, y, z] += 1
+        # except:
+        #     pass
+            # print(self.rocks[x,y+1,z], self.rocks[x,y-1,z])
+        # print(self.edgerocks == self.edgerocks.astype(int))
+        # print(self.edgerocks)
+        # print(edgerocks)
 
     def remove_rocks(self):
-        pass
+        random_field = np.random.uniform(size=(self.dims))/self.velocities #/self.rock_hardness
+        edge_rocks_to_remove = np.logical_and(self.edgerocks, random_field < self.edgerock1_threshold)
+        bottom_rocks_to_remove = np.logical_and(self.bottomrocks, random_field < self.bottomrock_threshold)
+        rocks_to_remove = np.logical_or(edge_rocks_to_remove, bottom_rocks_to_remove)
+        self.rocks[rocks_to_remove] = False
+
+        # np.logical_and(self.rocks & np.logical_not(self.rocks), np.logical_not(self.rocks))
+
+    def smooth_state(self, fact):
+        compressedarray = np.zeros((self.dimx//fact, self.dimy//fact, self.dimz//fact))
+        for i in range(fact):
+            for j in range(fact):
+                for k in range(fact):
+                    compressedarray += self.rocks[i::fact, j::fact, k::fact]
+        smoothed_rock_array = compressedarray > 0.5*fact**3
+        return smoothed_rock_array
 
 
 
     def simulate(self):
+        for i in range(self.simsteps):
+            self.calculateAreas()
+            self.calculateVelocities()
+            self.calculateEdgeRocks()
+            self.remove_rocks()
+            self.step += 1
         # do simulation n times
         # self.H -= 1
         # for i in range(self.simsteps):
         #     pass
-        state = np.zeros(self.dims)
-        state[:,:,:self.H+1] = 1
-        state[self.rocks] = 2
+        smoothed_rocks = self.smooth_state(self.smoothing_factor)
+        # print(smoothed_rocks)
+        state = np.zeros(self.dims//self.smoothing_factor)
+        state[:,:,:self.H//self.smoothing_factor+1] = 1
+        state[smoothed_rocks] = 2
+        state = np.rot90(state,axes=(0,1))
         # print(state)
         return state
 
@@ -256,6 +354,7 @@ class Erosion():
 
 if __name__ == "__main__":
     erosion = Erosion()
+    erosion.simulate()
     # for state in erosion.simulate():
 
         # print("a")

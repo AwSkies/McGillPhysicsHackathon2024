@@ -48,7 +48,7 @@ class Renderer:
         plt.tight_layout()
 
     def render(self, frames, file):
-        anim = animation.FuncAnimation(self.fig, self.process_frame, frames, interval = 300, save_count=20)
+        anim = animation.FuncAnimation(self.fig, self.process_frame, frames, interval = 300, save_count=75)
         self.format()
         anim.save(file, "pillow")
         plt.show()

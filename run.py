@@ -17,7 +17,7 @@ def main():
 
 
     def advance_frame():
-        for i in range(1):
+        for i in range(400):
             arr1 = sim.simulate()
             yield arr1
 
