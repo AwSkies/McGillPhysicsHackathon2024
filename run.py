@@ -40,8 +40,6 @@ def main():
             
             yield arr
 
-    # print(test_animation_advance_frame())
-
     ren.render(advance_frame(), args.output, args.frames, args.fps)
 
 if __name__ == '__main__':
