@@ -10,7 +10,7 @@ class Erosion():
         self.dims = np.array([self.dimx, self.dimy, self.dimz])
 
         self.Dt = 0.01
-
+        
         self.g = np.array([0, 0, 9.8])
 
         self.gDt = self.g*self.Dt
@@ -54,6 +54,7 @@ class Erosion():
 
     '''
     def process_rocks(self):
+        rocks_killlist = np.zeros(self.dims, dtype=bool)
         for i in range(self.dims[0]):
             for j in range(self.dims[1]):
                 for k in range(self.dims[2]):
@@ -65,27 +66,35 @@ class Erosion():
                         self.kill_rock(i, j, k)
                     print(i, j, k, self.rocks[2][2][2])
                     '''
-                    self.erode_rock(i, j, k)
+                    rocks_killlist[i][j][k] = self.erode_rock(i, j, k)
 
     def erode_rock(self, x, y, z):
-        normal_vector, flow_vector = self.flow_vectors(x, y, z)
+        rock_HP = 0.0
+        damage = 6
+        normal_vector, flow_vector, rock_HP = self.rock_character(x, y, z)
+        normal_magnitude = math.sqrt(normal_vector[0]**2 + normal_vector[1]**2 + normal_vector[2]**2)
+        print("Position", x, y, z, 'RockHP', rock_HP, "Vector", normal_vector[0], normal_vector[1], normal_vector[2])
+        if(normal_magnitude == 0):
+            return True
         cosine = np.dot(normal_vector, flow_vector)
-
-
+        flow_magnitude = math.sqrt(flow_vector[0]**2 + flow_vector[1]**2 + flow_vector[2]**2)
         
+        return False
+
 
     
     def kill_rock(self, x, y, z):
         self.rocks[x, y, z] = False
         #print("rock killed")
 
-    def flow_vectors(self, x, y, z):
+    def rock_character(self, x, y, z):
         normal_smoothing = 1
+        rock_HP = 0.0
         normal_vector = np.array([0.0, 0.0, 0.0])
         flow_vector = np.array([0.0, 0.0, 0.0])
         flow_magnitude = 0
         if(x == 0 or x == self.dims[0] - 1 or y == 0 or y == self.dims[1] - 1 or z == 0 or z == self.dims[2] - 1):
-            return normal_vector 
+            return normal_vector, flow_vector, rock_HP
         else:
             for i in range(x-1, x+1+1):
                 for j in range(y-1, y+1+1):
@@ -97,28 +106,36 @@ class Erosion():
                             normal_vector[1] = normal_vector[1] + ((y-j) / normal_magnitude)
                             normal_vector[2] = normal_vector[2] + ((z-k) / normal_magnitude)
                         if(normal_magnitude != 0 and self.rocks[i, j, k]):
-                            flow_vector[0] = flow_vector[0] + self.grid_velocities[0] * ((x-i) / normal_magnitude)
-                            flow_vector[1] = flow_vector[1] + self.grid_velocities[1] * ((y-j) / normal_magnitude)
-                            flow_vector[2] = flow_vector[2] + self.grid_velocities[2] * ((z-k) / normal_magnitude)
-            
+                            flow_vector[0] = flow_vector[0] + self.grid_velocities[i][j][k][0] * ((x-i) / normal_magnitude)
+                            flow_vector[1] = flow_vector[1] + self.grid_velocities[i][j][k][1] * ((y-j) / normal_magnitude)
+                            flow_vector[2] = flow_vector[2] + self.grid_velocities[i][j][k][2] * ((z-k) / normal_magnitude)
+                            if(((i==x and j==y) or
+                                (j==y and k==z) or
+                                (i==x and k==z))):
+                                    rock_HP = rock_HP + 1
             normal_magnitude = math.sqrt(normal_vector[0]**2 + normal_vector[1]**2 + normal_vector[2]**2)
             if(normal_magnitude != 0):
                 normal_vector = normal_vector / normal_magnitude
             flow_magnitude = math.sqrt(flow_vector[0]**2 + flow_vector[1]**2 + flow_vector[2]**2)
             if(flow_magnitude != 0):
                 flow_vector = flow_vector / flow_magnitude
-            return normal_vector, flow_vector
+            return normal_vector, flow_vector, rock_HP
+
+#if __name__ == "__main__":
+
 
 print("Hello")
 erosion = Erosion()
 erosion.rocks[2][2][2] = True
-#erosion.rocks[1][2][1] = True
-#erosion.rocks[1][2][2] = True
-#erosion.rocks[1][2][3] = True
+
+erosion.rocks[2][2][1] = True
+erosion.rocks[2][2][3] = True
+erosion.rocks[2][1][2] = True
+erosion.rocks[2][3][2] = True
+erosion.rocks[1][2][2] = True
+erosion.rocks[3][2][2] = True
 #erosion.rocks[1][2][4] = True
-print(erosion.rocks[2][2][2])
 erosion.process_rocks()
-print(erosion.rocks[2][2][2])
         
 
 
