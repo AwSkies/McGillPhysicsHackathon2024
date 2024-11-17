@@ -9,17 +9,24 @@ class Erosion():
 
         self.dimx, self.dimy, self.dimz = (30, 10, 10)
         self.dims = np.array([self.dimx, self.dimy, self.dimz])
+        self.xs = np.arange(0, self.dimx, 1)
 
         self.h = 1
         self.V = 1
-        self.A = 300
+        self.A = 8
+        self.AV = self.A*self.V
         self.H = 7
         self.areas = np.zeros(self.dimx)
+        self.velocities = np.zeros(self.dimx)
         self.rocks = np.ones(self.dims, dtype=bool)
-        self.rocks[:, 3:7, 4:] = False
+        self.rocks[:, 4:6, 4:] = False
         self.rocks[:, :, 9:] = False
 
-        print(self.rocks)
+
+
+
+
+        # print(self.rocks)
 
 
         self.Dt = 0.01
@@ -31,42 +38,60 @@ class Erosion():
         self.particle_positions = np.random.uniform(size=(self.Nparticles,3)) * (self.dims - 2) + 1
         # self.particle_positions = np.array([[2.2, 2.1, 2.1]])
 
-        self.isWater = np.zeros(self.dims, dtype=bool)
-        self.particle_velocities = np.zeros((self.Nparticles,3))
-        self.particle_velocities = np.random.uniform(size=(self.Nparticles,3))
-
-        self.grid_velocities = np.zeros((self.dimx, self.dimy, self.dimz, 3))
-        # self.rocks = np.zeros(self.dims, dtype=bool)
-        self.dims3 = (self.dimx, self.dimy, self.dimz, 3)
-        self.s = np.ones(self.dims3)
-        self.s[self.rocks] = 0
-        self.s[np.roll(self.rocks, 1, axis=0), 0] = 0
-        self.s[np.roll(self.rocks, 1, axis=1), 1] = 0
-        self.s[np.roll(self.rocks, 1, axis=2), 2] = 0
-        self.o = 1.9
-
-        self.h = 1
-        self.oneoffsets = [np.array([0, 1, 1]), np.array([1, 0, 1]), np.array([1, 1, 0])]
-        self.offsets = [self.h/2* x for x in self.oneoffsets]
-
-        self.particle_density = np.zeros(self.dims)
-        self.grid_offsets = 0
-        self.grid_locations = 0
-        self.onesvecs = []
-        self.onesvecszero = []
-
-
-        for a1 in range(2):
-            for a2 in range(2):
-                for a3 in range(2):
-                    self.onesvecs.append(np.array([a1, a2, a3]))
-                    self.onesvecszero.append(np.array([0, a1, a2, a3]))
-        self.onesvecsopposite = [1 - x for x in self.onesvecs]
-
-
         self.simsteps = 10
 
+        self.initializeAreas()
+        self.initializeVelocities()
+
+
+    def getAstrip(self, x, z):
+        return np.count_nonzero(np.logical_not(self.rocks[x,:,z]))
+
+    def getArea(self, x):
+        return np.count_nonzero(np.logical_not(self.rocks[x,:,:self.H+1]))
+
+    def initializeAreas(self):
+        area = 0
+        for z in range(self.dimz):
+            area += self.getAstrip(0, z)
+            if area > self.A:
+                self.H = z
+                break
+        area2 = area-self.getAstrip(0, self.H)
+        if abs(area2 - self.A) < (self.A - area):
+            self.H -= 1
+
+        for x in self.xs:
+            self.areas[x] = self.getArea(x)
+
+    def initializeVelocities(self):
+        self.velocities = self.AV/self.areas
+
+    def remove_rocks(self):
+        pass
+
+
+
+    def simulate(self):
+        # do simulation n times
+        # self.H -= 1
+        # for i in range(self.simsteps):
+        #     pass
+        state = np.zeros(self.dims)
+        state[:,:,:self.H+1] = 1
+        state[self.rocks] = 2
+        # print(state)
+        return state
+
+
+
+
+
+
     #grid dimension
+
+
+
 
 
     '''
@@ -222,16 +247,7 @@ class Erosion():
 #if __name__ == "__main__":
 
 
-    def simulate(self):
-            # do simulation n times
-            self.H -= 1
-            # for i in range(self.simsteps):
-            #     pass
-            state = np.zeros(self.dims)
-            state[:,:,:self.H+1] = 1
-            state[self.rocks] = 2
-            # print(state)
-            return state
+
 
 
 # def test():
@@ -240,8 +256,9 @@ class Erosion():
 
 if __name__ == "__main__":
     erosion = Erosion()
-    for state in erosion.simulate():
-        print("a")
+    # for state in erosion.simulate():
+
+        # print("a")
 
 
 # erosion.rocks[2][2][2] = True
