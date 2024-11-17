@@ -1,20 +1,25 @@
 # Remove this import once it's working since it should be able to get input directly from the simulator
 import numpy as np
 
-from gooey import Gooey
-from argparse import ArgumentParser, FileType
+from gooey import GooeyParser, Gooey
 from erosion import Erosion, Renderer
 
 @Gooey
 def main():
-    parser = ArgumentParser(prog="erosion-simulator")
+    parser = GooeyParser(prog="erosion-simulator")
+    render_group  = parser.add_argument_group("Render Options")
+    render_group.add_argument('output', help = "Output File Name of Animation", widget = 'FileSaver')
 
     args = parser.parse_args()
 
     sim = Erosion()
-    ren = Renderer()
+    ren = Renderer(False)
 
-    def anim_states():
+    def advance_frame():
+        while True:
+            yield sim.simulate()
+
+    def test_animation_advance_frame():
         for j in range(0, 10):
             shp = (25, 25, 25)
             arr = np.zeros(shp)
@@ -29,7 +34,7 @@ def main():
             
             yield arr
 
-    ren.render(anim_states, "anim.gif")
+    ren.render(advance_frame, args.output)
 
 if __name__ == '__main__':
     main()
